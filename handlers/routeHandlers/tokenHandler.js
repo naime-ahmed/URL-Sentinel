@@ -19,18 +19,18 @@ handler.tokenHandler = (requestProperties, callback) => {
 handler._token = {};
 
 handler._token.post = (requestProperties, callback) => {
-    let { phone, password } = requestProperties.body;
-    phone = typeof phone === 'string' && phone.trim().length === 11 ? phone.trim() : false;
+    let { id, password } = requestProperties.body;
+    id = typeof id === 'string' && id.trim().length === 11 ? id.trim() : false;
     password = typeof password === 'string' && password.trim().length > 0 ? password.trim() : false;
 
-    if (phone && password) {
-        data.read('users', phone, (err1, userData) => {
+    if (id && password) {
+        data.read('users', id, (err1, userData) => {
             const hashedPassword = hash(password);
             if (hashedPassword === parseJSON(userData).password) {
                 const tokenId = createRandomString(20);
                 const expires = Date.now() + 60 * 60 * 1000;
                 const tokenObject = {
-                    phone,
+                    id,
                     id: tokenId,
                     expires,
                 };
@@ -82,7 +82,7 @@ handler._token.get = (requestProperties, callback) => {
         });
     }
 };
-// @TODO Authentication
+
 handler._token.put = (requestProperties, callback) => {
     let { id, extend } = requestProperties.body;
     id = typeof id === 'string' && id.trim().length === 20 ? id.trim() : false;
@@ -116,7 +116,38 @@ handler._token.put = (requestProperties, callback) => {
         });
     }
 };
-// @TODO Authentication
-handler._token.delete = (requestProperties, callback) => {};
+
+handler._token.delete = (requestProperties, callback) => {
+    // check the id number is valid.
+    let { id } = requestProperties.queryStringObject;
+    id = typeof id === 'string' && id.trim().length === 20 ? id : false;
+
+    if (id) {
+        // Lookup the user
+        data.read('tokens', id, (err1, tokenData) => {
+            if (!err1 && tokenData) {
+                data.delete('tokens', id, (err2) => {
+                    if (!err2) {
+                        callback(200, {
+                            message: 'token was successfully delted',
+                        });
+                    } else {
+                        callback(400, {
+                            error: 'There was a server side error',
+                        });
+                    }
+                });
+            } else {
+                callback(400, {
+                    error: 'There was a server side error',
+                });
+            }
+        });
+    } else {
+        callback(400, {
+            error: 'There was a problem in you request',
+        });
+    }
+};
 
 module.exports = handler;
