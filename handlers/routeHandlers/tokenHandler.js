@@ -83,7 +83,39 @@ handler._token.get = (requestProperties, callback) => {
     }
 };
 // @TODO Authentication
-handler._token.put = (requestProperties, callback) => {};
+handler._token.put = (requestProperties, callback) => {
+    let { id, extend } = requestProperties.body;
+    id = typeof id === 'string' && id.trim().length === 20 ? id.trim() : false;
+
+    extend = !!(typeof extend === 'boolean' && extend === true);
+
+    if (id && extend) {
+        data.read('tokens', id, (err1, tokenData) => {
+            const tokenObject = parseJSON(tokenData);
+            if (tokenObject.expires > Date.now()) {
+                tokenObject.expires = Date.now() + 60 * 60 * 1000;
+                // store the updated token
+                data.update('tokens', id, tokenObject, (err2) => {
+                    if (!err2) {
+                        callback(200);
+                    } else {
+                        callback(500, {
+                            error: 'There was a server side error',
+                        });
+                    }
+                });
+            } else {
+                callback(400, {
+                    error: 'Token already expired',
+                });
+            }
+        });
+    } else {
+        callback(400, {
+            error: 'There was a problem in your request',
+        });
+    }
+};
 // @TODO Authentication
 handler._token.delete = (requestProperties, callback) => {};
 
