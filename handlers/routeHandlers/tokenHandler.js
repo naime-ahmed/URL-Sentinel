@@ -57,8 +57,31 @@ handler._token.post = (requestProperties, callback) => {
         });
     }
 };
-// @TODO Authentication
-handler._token.get = (requestProperties, callback) => {};
+
+handler._token.get = (requestProperties, callback) => {
+    // / check the id is valid.
+    let { id } = requestProperties.queryStringObject;
+    id = typeof id === 'string' && id.trim().length === 20 ? id : false;
+
+    if (id) {
+        // Lookup the token
+        data.read('tokens', id, (err, tokenData) => {
+            const token = { ...parseJSON(tokenData) };
+
+            if (!err && token) {
+                callback(200, token);
+            } else {
+                callback(404, {
+                    error: 'Requested token was not found',
+                });
+            }
+        });
+    } else {
+        callback(404, {
+            error: 'Requested token was not found',
+        });
+    }
+};
 // @TODO Authentication
 handler._token.put = (requestProperties, callback) => {};
 // @TODO Authentication
