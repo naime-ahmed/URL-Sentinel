@@ -19,18 +19,18 @@ handler.tokenHandler = (requestProperties, callback) => {
 handler._token = {};
 
 handler._token.post = (requestProperties, callback) => {
-    let { id, password } = requestProperties.body;
-    id = typeof id === 'string' && id.trim().length === 11 ? id.trim() : false;
+    let { phone, password } = requestProperties.body;
+    phone = typeof phone === 'string' && phone.trim().length === 11 ? phone.trim() : false;
     password = typeof password === 'string' && password.trim().length > 0 ? password.trim() : false;
 
-    if (id && password) {
-        data.read('users', id, (err1, userData) => {
+    if (phone && password) {
+        data.read('users', phone, (err1, userData) => {
             const hashedPassword = hash(password);
             if (hashedPassword === parseJSON(userData).password) {
                 const tokenId = createRandomString(20);
                 const expires = Date.now() + 60 * 60 * 1000;
                 const tokenObject = {
-                    id,
+                    phone,
                     id: tokenId,
                     expires,
                 };
