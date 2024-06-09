@@ -21,14 +21,19 @@ handler._check = {};
 
 handler._check.post = (requestProperties, callback) => {
     // validate inputs
-    let { protocol, url, method, successCodes, timeoutSeconds } = requestProperties.body;
+    let {
+ protocol, url, method, successCodes, timeoutSeconds 
+} = requestProperties.body;
 
-    protocol =        typeof protocol === 'string' && ['http', 'https'].includes(protocol) ? protocol : false;
+    protocol =
+        typeof protocol === 'string' && ['http', 'https'].includes(protocol) ? protocol : false;
     url = typeof url === 'string' && url.trim().length > 0 ? protocol : false;
-    method =        typeof method === 'string' && ['GET', 'POST', 'PUT', 'DELETE'].includes(method)
+    method =
+        typeof method === 'string' && ['GET', 'POST', 'PUT', 'DELETE'].includes(method)
             ? method
             : false;
-    successCodes =        typeof successCodes === 'object' && successCodes instanceof Array ? successCodes : false;
+    successCodes =
+        typeof successCodes === 'object' && successCodes instanceof Array ? successCodes : false;
     // eslint-disable-next-line prettier/prettier
     timeoutSeconds = typeof timeoutSeconds === 'number' && timeoutSeconds % 1 === 0 && timeoutSeconds >= 1 && timeoutSeconds <= 5 ? timeoutSeconds : false;
 
@@ -142,7 +147,7 @@ handler._check.get = (requestProperties, callback) => {
                                 error: 'Authentication failure',
                             });
                         }
-                    },
+                    }
                 );
             } else {
                 callback(500, {
@@ -159,14 +164,19 @@ handler._check.get = (requestProperties, callback) => {
 
 handler._check.put = (requestProperties, callback) => {
     // validate inputs
-    let { protocol, url, method, successCodes, timeoutSeconds, id } = requestProperties.body;
+    let {
+ protocol, url, method, successCodes, timeoutSeconds, id 
+} = requestProperties.body;
 
-    protocol =        typeof protocol === 'string' && ['http', 'https'].includes(protocol) ? protocol : false;
+    protocol =
+        typeof protocol === 'string' && ['http', 'https'].includes(protocol) ? protocol : false;
     url = typeof url === 'string' && url.trim().length > 0 ? protocol : false;
-    method =        typeof method === 'string' && ['GET', 'POST', 'PUT', 'DELETE'].includes(method)
+    method =
+        typeof method === 'string' && ['GET', 'POST', 'PUT', 'DELETE'].includes(method)
             ? method
             : false;
-    successCodes =        typeof successCodes === 'object' && successCodes instanceof Array ? successCodes : false;
+    successCodes =
+        typeof successCodes === 'object' && successCodes instanceof Array ? successCodes : false;
     // eslint-disable-next-line prettier/prettier
     timeoutSeconds = typeof timeoutSeconds === 'number' && timeoutSeconds % 1 === 0 && timeoutSeconds >= 1 && timeoutSeconds <= 5 ? timeoutSeconds : false;
 
@@ -223,6 +233,93 @@ handler._check.put = (requestProperties, callback) => {
     }
 };
 
-handler._check.delete = (requestProperties, callback) => {};
+handler._check.delete = (requestProperties, callback) => {
+    let { id } = requestProperties.queryStringObject;
+    id = typeof id === 'string' && id.trim().length === 20 ? id : false;
+
+    if (id) {
+        // lookup the check
+        data.read('checks', id, (err1, checkData) => {
+            if ((!err1, checkData)) {
+                // eslint-disable-next-line prettier/prettier
+                const token = typeof requestProperties.headersObject.token === 'string'
+                        ? requestProperties.headersObject.token
+                        : false;
+
+                tokenHandler._token.verify(
+                    token,
+                    parseJSON(checkData).userPhone,
+                    (tokenIsValid) => {
+                        if (tokenIsValid) {
+                            // delete the check data
+                            data.delete('checks', id, (err2) => {
+                                if (!err2) {
+                                    data.read(
+                                        'users',
+                                        parseJSON(checkData).userPhone,
+                                        (err3, userData) => {
+                                            const userObject = parseJSON(userData);
+                                            if (!err3 && userData) {
+                                                // eslint-disable-next-line prettier/prettier
+                                                const userChecks = typeof userObject.checks === 'object' && userObject.checks instanceof Array && userObject.checks ? userObject.checks : [];
+
+                                                // remove the deleted check id from user's list of checks
+
+                                                const checkPosition = userChecks.indexOf(id);
+                                                if (checkPosition > -1) {
+                                                    userChecks.splice(checkPosition, 1);
+                                                    // update the user data
+                                                    userObject.checks = userChecks;
+                                                    data.update(
+                                                        'users',
+                                                        userObject.phone,
+                                                        userObject,
+                                                        (err4) => {
+                                                            if (!err4) {
+                                                                callback(200);
+                                                            } else {
+                                                                callback(500, {
+                                                                    error: 'There was a server side problem',
+                                                                });
+                                                            }
+                                                        },
+                                                    );
+                                                } else {
+                                                    callback(500, {
+                                                        error: 'The check id that you are trying to remove is not found in user!',
+                                                    });
+                                                }
+                                            } else {
+                                                callback(500, {
+                                                    error: 'There was a server side problem',
+                                                });
+                                            }
+                                        }
+                                    );
+                                } else {
+                                    callback(500, {
+                                        error: 'There was a server side problem',
+                                    });
+                                }
+                            });
+                        } else {
+                            callback(403, {
+                                error: 'Authentication failure',
+                            });
+                        }
+                    }
+                );
+            } else {
+                callback(500, {
+                    error: 'you have a problem in your request',
+                });
+            }
+        });
+    } else {
+        callback(400, {
+            error: 'you have a problem in your request',
+        });
+    }
+};
 
 module.exports = handler;
