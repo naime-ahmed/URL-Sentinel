@@ -157,7 +157,71 @@ handler._check.get = (requestProperties, callback) => {
     }
 };
 
-handler._check.put = (requestProperties, callback) => {};
+handler._check.put = (requestProperties, callback) => {
+    // validate inputs
+    let { protocol, url, method, successCodes, timeoutSeconds, id } = requestProperties.body;
+
+    protocol =        typeof protocol === 'string' && ['http', 'https'].includes(protocol) ? protocol : false;
+    url = typeof url === 'string' && url.trim().length > 0 ? protocol : false;
+    method =        typeof method === 'string' && ['GET', 'POST', 'PUT', 'DELETE'].includes(method)
+            ? method
+            : false;
+    successCodes =        typeof successCodes === 'object' && successCodes instanceof Array ? successCodes : false;
+    // eslint-disable-next-line prettier/prettier
+    timeoutSeconds = typeof timeoutSeconds === 'number' && timeoutSeconds % 1 === 0 && timeoutSeconds >= 1 && timeoutSeconds <= 5 ? timeoutSeconds : false;
+
+    id = typeof id === 'string' && id.trim().length === 20 ? id : false;
+
+    if (id) {
+        if (protocol || url || method || successCodes || timeoutSeconds) {
+            data.read('checks', id, (err1, checkData) => {
+                if (!err1 && checkData) {
+                    const checkObject = parseJSON(checkData);
+                    // eslint-disable-next-line prettier/prettier
+                    const token = typeof requestProperties.headersObject.token === 'string'
+                            ? requestProperties.headersObject.token
+                            : false;
+
+                    tokenHandler._token.verify(token, checkObject.userPhone, (tokenIsValid) => {
+                        if (tokenIsValid) {
+                            if (protocol) {
+                                checkObject.protocol = protocol;
+                            }
+                            if (url) {
+                                checkObject.url = url;
+                            }
+                            if (method) {
+                                checkObject.method = method;
+                            }
+                            if (successCodes) {
+                                checkObject.successCodes = successCodes;
+                            }
+                            if (timeoutSeconds) {
+                                checkObject.timeoutSeconds = timeoutSeconds;
+                            }
+                            // store the check object
+                            data.update('checks', id, checkObject, (err2) => {
+                                if (!err2) {
+                                    callback(200);
+                                } else {
+                                    callback(500, { error: 'There was a server side error' });
+                                }
+                            });
+                        } else {
+                            callback(403, { error: 'Authentication problem' });
+                        }
+                    });
+                } else {
+                    callback(500, { error: 'There was a problem in the server' });
+                }
+            });
+        } else {
+            callback(400, { error: 'You must provide at least one field to update' });
+        }
+    } else {
+        callback(400, { error: 'You have a problem in your request' });
+    }
+};
 
 handler._check.delete = (requestProperties, callback) => {};
 
