@@ -2,7 +2,6 @@
 const https = require('https');
 const querystring = require('querystring');
 const { twilio } = require('./environments');
-// twilio recovery code: 63DDUGBV3C31X9S3NYZGAH5Z
 
 // module scaffolding
 const notifications = {};
